@@ -45,6 +45,7 @@ var/
 *.egg
 *tmp/
 *.pdf
+data/submit*.csv
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
