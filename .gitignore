@@ -44,6 +44,7 @@ var/
 .installed.cfg
 *.egg
 *tmp/
+*.pdf
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
