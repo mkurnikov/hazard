@@ -3,13 +3,13 @@ from __future__ import division, print_function
 import pandas as pd
 import numpy as np
 from kaggle_tools.feature_extraction import FeatureColumnsExtractor
-from src.main import get_preprocessing_pipeline
+from src.main import get_whole_dataset, get_feature_union
 import settings
 
 orig_dataset = pd.read_csv(settings.TRAIN_FILE)
 target = FeatureColumnsExtractor(settings.TARGET).fit_transform(orig_dataset)
 
-dataset = get_preprocessing_pipeline().fit_transform(orig_dataset)
+dataset = get_feature_union().fit_transform(get_whole_dataset(), np.empty(()))
 
 import matplotlib
 import matplotlib.pyplot as plt

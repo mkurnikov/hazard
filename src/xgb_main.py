@@ -6,18 +6,6 @@ import pandas as pd
 import numpy as np
 import sys
 import time
-#
-# class Logger(object):
-#     def __init__(self):
-#         self.terminal = sys.stdout
-#         self.log = open('logfile.log', 'a')
-#
-#     def write(self, message):
-#         self.terminal.write(message)
-#         self.log.write(message)
-#         self.log.flush()
-#
-# sys.stdout = Logger()
 
 from kaggle_tools.plotting import plot_train_test_error
 import matplotlib.pyplot as plt
@@ -60,43 +48,48 @@ import src.feature_sets as feature_sets
 import xgboost as xgb
 
 from sklearn.linear_model import LogisticRegression
+params = {
+    "objective": "reg:linear",
+    "eta": 0.01,
+    "min_child_weight": 5,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "scale_pos_weight": 1.0,
+    "silent": 1,
+    "max_depth": 8
+}
+
 def get_estimation_pipeline():
     pipeline = Pipeline([
-        # ('xgb', xgb.XGBRegressor(**params))
-        # ('linear', RidgeCV(store_cv_values=True)),
-        # ('linear', Ridge(alpha=40.0)),
-
-        # ('svm', LinearSVR(C=0.125, epsilon=0.0, random_state=1))
-        ('feature_map', Nystroem(gamma=0.01, random_state=1, kernel='poly', degree=2,
-                                 n_components=450, coef0=2.5)),
-        ('svm', LinearSVR(C=0.25, epsilon=0.0, random_state=22,
-                          loss='squared_epsilon_insensitive'))
-        # ('linear', SGDRegressor(penalty='l2', alpha=40.0, loss='squared_epsilon_insensitive', epsilon=0.15,
-        #                         random_state=22, n_iter=50, shuffle=False))
-        # ('linear', Lasso(alpha=0.1))
-        # ('linear', LinearRegression(n_jobs=1)),
-        # ('xgb', StackedRegressor([, Ridge(alpha=40.0)], weights=[0.45, 0.55]))
-        # ('forest', RandomForestRegressor(random_state=4242, n_jobs=2, n_estimators=250, max_depth=7))
-        # ('tree', DecisionTreeRegressor(max_depth=10, random_state=1))
-        # ('linear', ElasticNet(l1_ratio=1.0))
-        # ('pls', PLSRegression(n_components=10))
+        ('xgb', xgb.XGBRegressor(n_estimators=250,
+                                 max_depth=params['max_depth'],
+                                 learning_rate=params['eta'],
+                                 silent=params['silent'],
+                                 objective=params['objective'],
+                                 nthread=1,
+                                 colsample_bytree=params['colsample_bytree'],
+                                 seed=1))
     ])
     return pipeline
 
 
 def get_feature_union():
     return FeatureUnion([
+        # feature_sets.DIRECT,
+        # feature_sets.POLYNOMIALS
+        # feature_sets.DIRECT_ONLY_CATEGORICAL_ONE_HOT_REDUCED
         # feature_sets.DIRECT_SCALED,
         # feature_sets.DIRECT_ONLY_CATEGORICAL_ONE_HOT_SCALED,
 
         # Ridge sets
-        feature_sets.DIRECT_ONE_HOT_REDUCED,
+        # feature_sets.DIRECT_ONE_HOT_REDUCED,
         # feature_sets.POLYNOMIALS_SCALED_REDUCED,
         # feature_sets.DIRECT_ONE_HOT,
         # feature_sets.POLYNOMIALS_SCALED,
 
         #RF sets
-        # feature_sets.DIRECT,
+
+        feature_sets.DIRECT_REDUCED,
         # feature_sets.POLYNOMIALS_INTERACTIONS,
         # feature_sets.SQRT_DIRECT
 
@@ -105,7 +98,7 @@ def get_feature_union():
         # #0.36677
         #
         # feature_sets.SQRT_DIRECT_SCALED,
-        feature_sets.SQRT_DIRECT_REDUCED_SCALED,
+        # feature_sets.SQRT_DIRECT_REDUCED_SCALED,
         #0.36715
         # feature_sets.LOG_DIRECT_SCALED# - bad set of features: -0.0001
         #0.
@@ -138,16 +131,8 @@ def get_preparation():
         ('estimator', get_estimation_pipeline())
     ])
 
-def get_whole_dataset(remove_target=True):
-    orig_dataset = pd.read_csv(settings.TRAIN_FILE)
-    orig_dataset.drop(settings.TARGET, axis=1, inplace=True)
-
-    orig_testset = pd.read_csv(settings.TEST_FILE)
-    whole_dataset = pd.concat([orig_dataset, orig_testset], axis=0)
-    return whole_dataset
-
-
 nonlinearity = lambda x: np.sqrt(x)
+
 
 if __name__ == '__main__':
     orig_dataset = pd.read_csv(settings.TRAIN_FILE)
@@ -205,7 +190,7 @@ if __name__ == '__main__':
     # print('time', time.time() - before)
     # pprint_cross_val_scores(
     #     cross_val_score(estimators_pipeline, dataset_, target, scoring=scorer_normalized_gini, cv=cv,
-    #                     verbose=3, n_jobs=1)
+    #                     verbose=3, n_jobs=2)
     # )
     # res = my_cross_val_score(estimators_pipeline, dataset_, target, scoring=scorer_normalized_gini, cv=cv,
     #                        verbose=3, n_jobs=1, score_all_at_once=True)
@@ -217,33 +202,20 @@ if __name__ == '__main__':
 
     # sys.exit(1)
     param_grid = {
-        # 'svm__epsilon':0.1 * np.arange(0.0, 3.5, 0.5),
-        # 'svm__epsilon': [0.25],
-        # 'svm__C': [0.125],
-        # 'svm__C': [0.125],
-        # 'transformation__variance__threshold': np.arange(0.005, 0.045, 0.0025),
-        # 'transformation__corr__threshold': [1.0, 0.98, 0.95, 0.93, 0.9, 0.88, 0.85, 0.82],
-        # 'svm__C': 2 ** np.arange(-5, 0, 0.5)
-        # 'linear__alpha': [1.5 ** exp for exp in range(-10, 10)]
-        # 'transformation__kbest__k': list(range(100, 983, 2))
-        # 'linear__alpha': [0.01, 1000, 10000]
-        # 'pls__n_components': list(range(2, 10))
-        # 'forest__n_estimators': [100, 150, 200, 250, 300, 350, 400],
-        # 'forest__max_depth': [5, 6, 7, 8, 9, 10]
-        'feature_map__gamma' : [0.035, 0.03, 0.025, 0.02, 0.01, 0.005],
-        # 'feature_map__n_components' : [100, 200, 400, 800],
-        'svm__C' : [0.05, 0.1, 0.25, 0.5, 0.75, 0.95]
+        'xgb__max_depth' : [3, 4, 5, 6, 7, 8, 9],
+        'xgb__subsample' : [0.5, 0.7, 0.8, 1.0],
+        'xgb__colsample_bytree': [0.5, 0.7, 0.8, 1.0],
+        'xgb__min_child_weight' : [5, 10]
+
     }
     overall_pipeline = get_overall_pipeline()
 
     # dataset = get_filters().fit_transform(dataset, target)
     from kaggle_tools.grid_search import MyGridSearchCV
-    from pymongo import MongoClient
 
-
+    collection = settings.MONGO_GRIDSEARCH_COLLECTION
     grid_search = MyGridSearchCV(get_estimation_pipeline(), param_grid, cv=cv, scoring=scorer_normalized_gini, n_jobs=2,
-                                 verbose=3,
-                                 mongo_collection=settings.MONGO_GRIDSEARCH_COLLECTION)
+                                 verbose=3, mongo_collection=collection)
     grid_search.fit(dataset, target)
 
 
@@ -276,6 +248,9 @@ if __name__ == '__main__':
     scores = scorer_normalized_gini(estimators_pipeline,
                                     holdout, holdout_target)
     print(scores)
+
+
+
 
 
 

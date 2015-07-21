@@ -24,8 +24,10 @@ import settings
 train  = pd.read_csv(settings.TRAIN_FILE, index_col=0)
 test  = pd.read_csv(settings.TEST_FILE, index_col=0)
 
-nonlinearity = lambda x: np.sqrt(x)
-labels = train.Hazard.apply(nonlinearity)
+from scipy.stats import boxcox
+# nonlinearity = lambda x: np.log(x)
+labels = train.Hazard
+labels = boxcox(labels)[0]
 
 train.drop('Hazard', axis=1, inplace=True)
 train.drop('T2_V10', axis=1, inplace=True)
@@ -101,4 +103,4 @@ preds = preds1 * 2.6 + preds2 * 7.4
 #generate solution
 preds = pd.DataFrame({"Id": test_ind, "Hazard": preds})
 preds = preds.set_index('Id')
-preds.to_csv(settings.SUBMIT_XGB)
+preds.to_csv(settings.SUBMIT_XGB_EXTERNAL)

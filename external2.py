@@ -2,6 +2,8 @@ from __future__ import division, print_function
 # noinspection PyUnresolvedReferences
 from py3compatibility import *
 
+import settings
+
 '''
 
 
@@ -18,8 +20,6 @@ import numpy as np
 from sklearn import preprocessing
 import xgboost as xgb
 from sklearn.feature_extraction import DictVectorizer
-
-nonlinearity = lambda x: np.sqrt(x)
 
 
 def xgboost_pred(train, labels, test):
@@ -41,26 +41,28 @@ def xgboost_pred(train, labels, test):
     num_rounds = 10000
     xgtest = xgb.DMatrix(test)
 
+    # labels_modified = np.log(labels)
+    labels_modified = labels
     # create a train and validation dmatrices
-    xgtrain = xgb.DMatrix(train[offset:, :], label=labels[offset:])
-    xgval = xgb.DMatrix(train[:offset, :], label=labels[:offset])
+    xgtrain = xgb.DMatrix(train[offset:, :], label=labels_modified[offset:])
+    xgval = xgb.DMatrix(train[:offset, :], label=labels_modified[:offset])
 
     # train using early stopping and predict
     watchlist = [(xgtrain, 'train'), (xgval, 'val')]
-    model = xgb.train(plst, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
+    model = xgb.train(plst, xgtrain, num_rounds, watchlist, early_stopping_rounds=80)
     preds1 = model.predict(xgtest)
 
 
     # reverse train and labels and use different 5k for early stopping.
     # this adds very little to the score but it is an option if you are concerned about using all the data.
     train = train[::-1, :]
-    labels = np.log(labels[::-1])
+    labels_modified = np.log(labels[::-1])
 
-    xgtrain = xgb.DMatrix(train[offset:, :], label=labels[offset:])
-    xgval = xgb.DMatrix(train[:offset, :], label=labels[:offset])
+    xgtrain = xgb.DMatrix(train[offset:, :], label=labels_modified[offset:])
+    xgval = xgb.DMatrix(train[:offset, :], label=labels_modified[:offset])
 
     watchlist = [(xgtrain, 'train'), (xgval, 'val')]
-    model = xgb.train(plst, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
+    model = xgb.train(plst, xgtrain, num_rounds, watchlist, early_stopping_rounds=80)
     preds2 = model.predict(xgtest)
 
 
@@ -69,7 +71,6 @@ def xgboost_pred(train, labels, test):
     preds = preds1 * 2.6 + preds2 * 7.4
     return preds
 
-import settings
 # load train and test
 train = pd.read_csv(settings.TRAIN_FILE, index_col=0)
 test = pd.read_csv(settings.TEST_FILE, index_col=0)
@@ -124,4 +125,4 @@ preds = 0.6 * preds1 + 0.4 * preds2
 # generate solution
 preds = pd.DataFrame({"Id": test_ind, "Hazard": preds})
 preds = preds.set_index('Id')
-preds.to_csv('xgboost_benchmark_kk.csv')
+preds.to_csv(settings.SUBMIT_XGB_EXTERNAL)

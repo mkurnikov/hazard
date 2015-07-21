@@ -6,14 +6,14 @@ import pandas as pd
 import numpy as np
 
 from kaggle_tools.feature_extraction import FeatureColumnsExtractor
-from preprocessing import ZeroVarianceFilter, HighCorrelationFilter
+from src.preprocessing import HighCorrelationFilter
 
-from main import get_estimation_pipeline, get_preprocessing_pipeline, get_feature_union
+from src.main import get_estimation_pipeline, get_feature_union
 import settings
 
 if __name__ == '__main__':
     original_dataset = pd.read_csv(settings.TRAIN_FILE)
-    target = FeatureColumnsExtractor(settings.TARGET).fit_transform(original_dataset).apply(lambda x: np.sqrt(x))
+    target = FeatureColumnsExtractor(settings.TARGET).fit_transform(original_dataset)
 
     # dataset = get_preprocessing_pipeline().fit_transform(original_dataset)
     feature_union = get_feature_union()
@@ -49,5 +49,5 @@ if __name__ == '__main__':
 
     output = pd.DataFrame({'Id': original_test_set['Id'],
                            'Hazard': predictions})
-    output.to_csv(settings.SUBMIT_FILE_SVM, index=False, header=True, columns=['Id', 'Hazard'])
+    output.to_csv(settings.SUBMIT_RIDGE_DIRECT, index=False, header=True, columns=['Id', 'Hazard'])
 

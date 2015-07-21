@@ -1,12 +1,14 @@
 from __future__ import division, print_function
+# noinspection PyUnresolvedReferences
+from py3compatibility import *
 
 import pandas as pd
 import numpy as np
 
 from kaggle_tools.feature_extraction import FeatureColumnsExtractor
-from preprocessing import HighCorrelationFilter
+from src.preprocessing import HighCorrelationFilter
 
-from main import get_estimation_pipeline, get_preprocessing_pipeline, get_feature_union
+from src.main import get_estimation_pipeline, get_feature_union
 import settings
 
 if __name__ == '__main__':
@@ -47,5 +49,5 @@ if __name__ == '__main__':
 
     output = pd.DataFrame({'Id': original_test_set['Id'],
                            'Hazard': predictions})
-    output.to_csv(settings.SUBMIT_FILE, index=False, header=True, columns=['Id', 'Hazard'])
+    output.to_csv(settings.SUBMIT_FILE_SVM, index=False, header=True, columns=['Id', 'Hazard'])
 

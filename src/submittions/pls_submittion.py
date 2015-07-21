@@ -8,10 +8,10 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.feature_selection import VarianceThreshold
 
 from kaggle_tools.feature_extraction import FeatureColumnsExtractor
-from preprocessing import ZeroVarianceFilter, HighCorrelationFilter
-from main import get_estimation_pipeline, get_preprocessing_pipeline, get_feature_union
-import settings
+from src.preprocessing import HighCorrelationFilter
 
+from src.main import get_estimation_pipeline, get_feature_union
+import settings
 
 if __name__ == '__main__':
     original_dataset = pd.read_csv(settings.TRAIN_FILE)

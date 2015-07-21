@@ -6,7 +6,8 @@ from kaggle_tools.feature_extraction import FeatureColumnsExtractor
 import pandas as pd
 import numpy as np
 import settings
-submittion_files = [settings.SUBMIT_FILE, settings.SUBMIT_FILE.replace('submit', 'submit_pls')]
+submittion_files = [settings.SUBMIT_RIDGE_SQRT_REDUCED, settings.SUBMIT_RIDGE_LOG]#, settings.SUBMIT_RIDGE_DIRECT]
+weights = [0.5, 0.5]#, 0.3]
 
 dfs = []
 for f in submittion_files:
@@ -16,7 +17,9 @@ for f in submittion_files:
 submittions = np.array(dfs).T
 print(submittions)
 
-print(submittions.mean(axis=1))
+
+stacked_predictions = np.average(submittions, axis=1)
+print(stacked_predictions)
 output = pd.DataFrame({'Id': df['Id'],
-                       'Hazard': submittions.mean(axis=1)})
+                       'Hazard': stacked_predictions})
 output.to_csv(settings.SUBMIT_FILE_STACKED, index=False, header=True, columns=['Id', 'Hazard'])
