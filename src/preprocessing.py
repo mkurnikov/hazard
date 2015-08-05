@@ -20,16 +20,6 @@ import shutil
 import atexit
 import os
 import settings
-cachedir = mkdtemp(dir=os.path.join(settings.PROJECT_ROOT, 'tmp'))
-print(cachedir)
-
-@atexit.register
-def rm_tmpdir():
-    shutil.rmtree(cachedir)
-
-from joblib import Memory
-memory = Memory(cachedir=cachedir, verbose=0)
-
 
 class TransformFeatureSet(BaseEstimator, TransformerMixin):
     def __init__(self, feature_set=None, transformer=None):
@@ -68,6 +58,36 @@ class TransformFeatureSet(BaseEstimator, TransformerMixin):
 # TODO: when I perform recursive filtering, I'm losing order of features - implement anyway
 # TODO: profile and improve memory and CPU usage
 
+
+# CORRELATION_FILTER_IS_BEING_USED = False
+memory = None
+TEMP_DIRECTORY = os.path.join(settings.PROJECT_ROOT, 'tmp')
+
+
+class ResponseCorrelationFilter(BaseEstimator, SelectorMixin):
+    def __init__(self, threshold=0.02):
+        self.threshold = threshold
+        self.support_mask = None
+
+
+    def fit(self, X, y=None):
+        X = check_array(X, accept_sparse=True)
+        if sparse.issparse(X):
+            X = X.toarray()
+
+        n_features = X.shape[1]
+        self.support_mask = np.zeros((n_features,), dtype=np.bool_)
+        data = [X[:, f] for f in range(n_features)]
+        response_corr = np.corrcoef(data, y)[-1, :][:-1]
+        self.support_mask = abs(response_corr) < self.threshold
+        return self
+
+
+    def _get_support_mask(self):
+        return ~self.support_mask
+
+
+
 # implement nonrecursive version for now
 class HighCorrelationFilter(BaseEstimator, SelectorMixin):
     """Filter high correlated features by threshold.
@@ -94,6 +114,23 @@ class HighCorrelationFilter(BaseEstimator, SelectorMixin):
 
 
     def fit(self, X, y=None):
+        # CORRELATION_FILTER_IS_BEING_USED
+        # global CORRELATION_FILTER_IS_BEING_USED
+        # CORRELATION_FILTER_IS_BEING_USED = True
+
+        #
+        # cachedir = mkdtemp(dir=tempdir)
+        # print(cachedir)
+        #
+        # @atexit.register
+        # def rm_tmpdir():
+        #     shutil.rmtree(cachedir)
+        #
+        # from joblib import Memory
+        # global memory
+        # memory = Memory(cachedir=cachedir, verbose=0)
+        # HighCorrelationFilter.
+
         # if hasattr(X, 'index'):
         #     self.cols = X.columns.values
         # else:
@@ -140,7 +177,7 @@ class HighCorrelationFilter(BaseEstimator, SelectorMixin):
         return self
 
     @staticmethod
-    @memory.cache
+    # @memory.cache
     def _compute_corr_matrix(X):
         print('compute correlation matrix')
         corr_matrix = np.corrcoef(X, rowvar=0)

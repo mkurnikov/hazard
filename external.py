@@ -82,6 +82,7 @@ xgval = xgb.DMatrix(train[:offset,:], label=labels[:offset])
 #train using early stopping and predict
 watchlist = [(xgtrain, 'train'),(xgval, 'val')]
 model = xgb.train(plst, xgtrain, num_rounds, watchlist, early_stopping_rounds=5)
+model.
 preds1 = model.predict(xgtest)
 
 #reverse train and labels and use different 5k for early stopping.

@@ -1,7 +1,5 @@
 from __future__ import division, print_function
 
-from sklearn.metrics import make_scorer
-
 import numpy as np
 def normalized_gini(y_true, y_pred):
     # check and get number of samples
@@ -54,10 +52,20 @@ def normalized_gini(y_true, y_pred):
 #     normalized_gini_ = gini(true_values, predictions) / gini(true_values, true_values)
 #     return normalized_gini_
 
-from scipy.special._ufuncs import inv_boxcox
+from kaggle_tools.utils import pipeline_utils
 def scorer_normalized_gini(estimator, X_test, y_test):
     # lambda_ = -0.224637660246
     y_test **= 2
+    # y_test -= 3
+    # y_test = inv_boxcox(y_test, lambda_)
+    # y_test = np.exp(y_test) + 0.5
+    preds = estimator.predict(X_test)
+    return normalized_gini(y_test, preds)
+
+
+def scorer_normalized_gini_direct(estimator, X_test, y_test):
+    # lambda_ = -0.224637660246
+    # y_test **= 2
     # y_test -= 3
     # y_test = inv_boxcox(y_test, lambda_)
     # y_test = np.exp(y_test) + 0.5

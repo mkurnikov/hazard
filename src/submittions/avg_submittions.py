@@ -6,10 +6,9 @@ from kaggle_tools.feature_extraction import FeatureColumnsExtractor
 import pandas as pd
 import numpy as np
 import settings
-submittion_files = [settings.SUBMIT_SVM_REDUCED, settings.SUBMIT_RIDGE_SQRT_FULL]
-weights = [1.0, 1.0]
-# weights = [1.0, 1.0, 1.0] - I think this is the right weighting for ridge, ridge, xgb.
-#           I was initially wrong when submit them with about 0.8 of true value.
+submittion_files = [settings.SUBMIT_MY_XGB_DIRECT_REDUCED, settings.SUBMIT_MY_XGB_DIRECT_FULL_SQRT_FULL,
+                    settings.SUBMIT_SVM_REDUCED]
+weights = [0.8, 0.6, 0.4]
 
 dfs = []
 for f in submittion_files:

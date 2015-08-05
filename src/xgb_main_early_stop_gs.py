@@ -21,18 +21,18 @@ import xgboost as xgb
 
 params = {
     "objective": "reg:linear",
-    "eta": 0.012,
+    "eta": 0.01,
     "min_child_weight": 65, #65 - best
-    "subsample": 0.6,
-    "colsample_bytree": 0.6,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
     "scale_pos_weight": 1.0,
     "silent": 1,
-    "max_depth": 11
+    "max_depth": 10
 }
 
 def get_estimation_pipeline():
     pipeline = Pipeline([
-        ('xgb', xgb.XGBRegressor(n_estimators=250,
+        ('xgb', xgb.XGBRegressor(n_estimators=1000,
                                  max_depth=params['max_depth'],
                                  learning_rate=params['eta'],
                                  silent=params['silent'],
@@ -50,15 +50,15 @@ def get_estimation_pipeline():
 
 def get_feature_union():
     return FeatureUnion([
-        feature_sets.DIRECT,
-        feature_sets.SQRT_DIRECT
+        # feature_sets.DIRECT,
+        # feature_sets.SQRT_DIRECT
         # feature_sets.POLYNOMIALS
         # feature_sets.DIRECT_ONLY_CATEGORICAL_ONE_HOT_REDUCED
         # feature_sets.DIRECT_SCALED,
         # feature_sets.DIRECT_ONLY_CATEGORICAL_ONE_HOT_SCALED,
 
-        # feature_sets.DIRECT_CONTINUOUS,
-        # feature_sets.DIRECT_DESCRIPTIVE_MEAN,
+        feature_sets.DIRECT_CONTINUOUS,
+        feature_sets.DIRECT_DESCRIPTIVE_MEAN,
             # feature_sets.DIRECT_DESCRIPTIVE_STD
         # feature_sets.DIRECT_CATEGORICAL
         # feature_sets.DIRECT_ALL_DESCRIPTIVE_MEAN
@@ -111,6 +111,7 @@ def get_overall_pipeline():
         ('features', get_feature_union()),
         # ('transformation', get_filters()),
         ('estimator', get_estimation_pipeline())
+        # ('xgb', get_estimation_pipeline().steps[0][1])
     ])
 
 # def get_preparation():
@@ -175,9 +176,10 @@ if __name__ == '__main__':
         # 'xgb__max_depth' : [8, 9, 10, 11],
         # 'xgb__subsample' : [0.4, 0.5, 0.6, 0.7, 0.8],
         # 'xgb__colsample_bytree': [0.4, 0.5, 0.6, 0.7, 0.8],
-        'estimator__xgb__max_depth' : [8, 9, 10, 11],
-        'estimator__xgb__subsample' : [0.4, 0.5, 0.6, 0.7, 0.8],
-        'estimator__xgb__colsample_bytree': [0.4, 0.5, 0.6, 0.7, 0.8],
+        # 'estimator__xgb__max_depth' : [8, 9, 10, 11],
+        'estimator__xgb__max_depth' : [11],
+        # 'estimator__xgb__subsample' : [0.4, 0.5, 0.6, 0.7, 0.8],
+        # 'estimator__xgb__colsample_bytree': [0.4, 0.5, 0.6, 0.7, 0.8],
         # 'estimator__xgb__min_child_weight': [10, 20, 30, 40, 45, 50, 55, 60, 65, 70, 75, 85, 95, 100]
         # 'estimator__xgb__min_child_weight': [65]
         # 'xgb__min_child_weight' : [5, 10, 20, 40, 100, 200]
@@ -186,61 +188,38 @@ if __name__ == '__main__':
     # overall_pipeline = get_overall_pipeline()
 
     # dataset = get_filters().fit_transform(dataset, target)
-    from kaggle_tools.grid_search import MyGridSearchCV
     from kaggle_tools.utils.logging_utils import MongoSerializer, MongoCollectionWrapper
 
+    collection = settings.MONGO_EARLY_STOP_XGB_GRID_SEARCH_COLLECTION
 
-    collection = settings.MONGO_GRIDSEARCH_COLLECTION
+    from kaggle_tools.grid_search import XGBEarlyStopGridSearchCV, XGBEarlyStopGridSearchCVPreliminaryVersion
+    from kaggle_tools.metrics import xgb_normalized_gini
 
+    from src.metrics import scorer_normalized_gini_direct
     serializer = MongoSerializer(['n_jobs', 'nthread'])
     coll_wrapper = MongoCollectionWrapper(serializer, collection)
-    grid_search = MyGridSearchCV(get_overall_pipeline(), param_grid, cv=cv, scoring=scorer_normalized_gini,
-                                 n_jobs=2, verbose=3, collection_wrapper=coll_wrapper)
-    # collection = settings.MONGO_EARLY_STOP_XGB_GRID_SEARCH_COLLECTION
-    #
-    # from kaggle_tools.grid_search import XGBEarlyStopGridSearchCV
-    # from kaggle_tools.metrics import xgb_normalized_gini
-    #
-    # serializer = MongoSerializer(['n_jobs', 'nthread'])
-    # coll_wrapper = MongoCollectionWrapper(serializer, collection)
     # grid_search = XGBEarlyStopGridSearchCV(get_overall_pipeline(), param_grid, cv=cv, scoring=scorer_normalized_gini,
-    #                              n_jobs=1, verbose=3, collection_wrapper=coll_wrapper, random_state=32,
-    #                                        early_stopping_rounds=40,
-    #                                        verbose_eval=True)
+    #                                     n_jobs=1, verbose=3, collection_wrapper=coll_wrapper, random_state=32,
+    #                                        early_stopping_rounds=40, hold_out_size=0.1,
+    #                                        verbose_eval=False, eval_metric=xgb_normalized_gini, maximize_score=True)
+    grid_search = XGBEarlyStopGridSearchCVPreliminaryVersion(get_overall_pipeline(), param_grid,
+                                                             cv=cv,
+                                                             scoring=scorer_normalized_gini,
+                                                             n_jobs=2,
+                                                             verbose=3,
+                                                             collection_wrapper=coll_wrapper,
+
+                                                             random_state=2,
+                                                             early_stopping_rounds=15,
+                                                             hold_out_size=0.25,
+                                                             verbose_eval=True,
+                                                             eval_metric=xgb_normalized_gini,
+                                                             maximize_score=True)
     grid_search.fit(dataset, target)
 
 
     from kaggle_tools.plotting import pprint_grid_scores
     pprint_grid_scores(grid_search.grid_scores_, sorted_by_mean_score=True)
-    print(grid_search.get_best_one_std(std_coeff=0.5))
-
-    # fig, ax = plot_train_test_error('forest__max_depth', param_grid, grid_search, more_is_better=True,
-    #                                 show_train_error=True)
-    # # ax.set_xscale('log')
-    # plt.show()
-    #
-    # fig, ax = plot_train_test_error('transformation__kbest__k', param_grid, grid_search, more_is_better=True,
-    #                                 show_train_error=True)
-    # # ax.set_xscale('log')
-    # plt.show()
-
-
-    sys.exit(1) #322, 402
-    holdout = orig_dataset.loc[orig_dataset.index[~sample_mask], :]
-    holdout_target = FeatureColumnsExtractor(settings.TARGET).fit_transform(holdout).apply(nonlinearity)
-
-    holdout = union.transform(holdout)
-    # holdout = var_thresh.transform(holdout)
-    # holdout = high_corr.transform(holdout)
-
-    # estimators_pipeline.set_params(**grid_search.best_params_)
-    print('refitting to evaluate holdout...')
-    estimators_pipeline.fit(dataset, target)
-    scores = scorer_normalized_gini(estimators_pipeline,
-                                    holdout, holdout_target)
-    print(scores)
-
-
 
 
 

@@ -43,10 +43,10 @@ from sklearn.neighbors import KNeighborsRegressor
 from kaggle_tools.preprocessing import StringToInt
 from kaggle_tools.feature_extraction import FeatureColumnsExtractor
 from kaggle_tools.pipeline import DataFrameMapper, DataFrameTransformer
-from kaggle_tools.cross_validation import MyGridSearchCV
-from kaggle_tools.utils import pprint_cross_val_scores
+# from kaggle_tools.cross_validation import MyGridSearchCV
+from kaggle_tools.utils.misc_utils import pprint_cross_val_scores
 from kaggle_tools.feature_extraction import HighOrderFeatures
-from kaggle_tools.stacked import StackedRegressor
+# from kaggle_tools.stacked import StackedRegressor
 from kaggle_tools.metrics import normalized_gini
 
 
@@ -59,16 +59,17 @@ import src.feature_sets as feature_sets
 
 import xgboost as xgb
 
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.tree import ExtraTreeRegressor
 from sklearn.linear_model import LogisticRegression
 def get_estimation_pipeline():
     pipeline = Pipeline([
         # ('xgb', xgb.XGBRegressor(**params))
         # ('linear', RidgeCV(store_cv_values=True)),
         # ('linear', Ridge(alpha=40.0)),
-
         # ('svm', LinearSVR(C=0.125, epsilon=0.0, random_state=1))
         ('feature_map', Nystroem(gamma=0.01, random_state=1, kernel='poly', degree=2,
-                                 n_components=450, coef0=2.5)),
+                                 n_components=100, coef0=2.5)),
         ('svm', LinearSVR(C=0.25, epsilon=0.0, random_state=22,
                           loss='squared_epsilon_insensitive'))
         # ('linear', SGDRegressor(penalty='l2', alpha=40.0, loss='squared_epsilon_insensitive', epsilon=0.15,
@@ -90,13 +91,13 @@ def get_feature_union():
         # feature_sets.DIRECT_ONLY_CATEGORICAL_ONE_HOT_SCALED,
 
         # Ridge sets
-        feature_sets.DIRECT_ONE_HOT_REDUCED,
+        # feature_sets.DIRECT_ONE_HOT_REDUCED,
         # feature_sets.POLYNOMIALS_SCALED_REDUCED,
         # feature_sets.DIRECT_ONE_HOT,
         # feature_sets.POLYNOMIALS_SCALED,
 
         #RF sets
-        # feature_sets.DIRECT,
+        feature_sets.DIRECT,
         # feature_sets.POLYNOMIALS_INTERACTIONS,
         # feature_sets.SQRT_DIRECT
 
@@ -105,7 +106,8 @@ def get_feature_union():
         # #0.36677
         #
         # feature_sets.SQRT_DIRECT_SCALED,
-        feature_sets.SQRT_DIRECT_REDUCED_SCALED,
+        # feature_sets.SQRT_DIRECT_REDUCED_SCALED,
+        # feature_sets.DIRECT_DESCRIPTIVE
         #0.36715
         # feature_sets.LOG_DIRECT_SCALED# - bad set of features: -0.0001
         #0.
@@ -128,7 +130,7 @@ def get_filters():
 def get_overall_pipeline():
     return Pipeline([
         ('features', get_feature_union()),
-        ('transformation', get_filters()),
+        # ('transformation', get_filters()),
         ('estimator', get_estimation_pipeline())
     ])
 
@@ -151,13 +153,19 @@ nonlinearity = lambda x: np.sqrt(x)
 
 if __name__ == '__main__':
     orig_dataset = pd.read_csv(settings.TRAIN_FILE)
-    #
     # sample_mask = np.zeros((orig_dataset.shape[0],), dtype=np.bool_)
     # sample_idx = sample_without_replacement(orig_dataset.shape[0], orig_dataset.shape[0] * 1.0, random_state=42)
     # sample_mask[sample_idx] = True
 
-    dataset = orig_dataset#.loc[orig_dataset.index[sample_mask], :]
-    target = FeatureColumnsExtractor(settings.TARGET).fit_transform(dataset).apply(nonlinearity)
+    before = time.time()
+    fcols = [col for col in orig_dataset.columns if col in settings.FEATURES]
+    catconversion = FeatureUnion([
+        feature_sets.CATEGORICAL_CONVERSION
+    ], n_jobs=1)
+
+    dataset = pd.DataFrame(data=catconversion.fit_transform(orig_dataset),
+                           columns=fcols, index=orig_dataset.index)
+    target = FeatureColumnsExtractor(settings.TARGET).fit_transform(orig_dataset).apply(nonlinearity)
     from scipy.stats import boxcox
 
     # print(dataset.columns)
@@ -182,7 +190,7 @@ if __name__ == '__main__':
     union = get_feature_union()
     # union.fit(data)
     # union = get_prepared_feature_union()
-    dataset = union.fit_transform(dataset, target)
+    # dataset = union.fit_transform(dataset, target)
     print(dataset.shape)
     print('preprocessing time: ', time.time() - before)
 
@@ -203,10 +211,10 @@ if __name__ == '__main__':
     # before = time.time()
     # print(hash(dataset.data))
     # print('time', time.time() - before)
-    # pprint_cross_val_scores(
-    #     cross_val_score(estimators_pipeline, dataset_, target, scoring=scorer_normalized_gini, cv=cv,
-    #                     verbose=3, n_jobs=1)
-    # )
+    pprint_cross_val_scores(
+        cross_val_score(get_overall_pipeline(), dataset, target, scoring=scorer_normalized_gini, cv=cv,
+                        verbose=3, n_jobs=2)
+    )
     # res = my_cross_val_score(estimators_pipeline, dataset_, target, scoring=scorer_normalized_gini, cv=cv,
     #                        verbose=3, n_jobs=1, score_all_at_once=True)
     # print(res)
@@ -215,7 +223,7 @@ if __name__ == '__main__':
     #
     # )
 
-    # sys.exit(1)
+    sys.exit(1)
     param_grid = {
         # 'svm__epsilon':0.1 * np.arange(0.0, 3.5, 0.5),
         # 'svm__epsilon': [0.25],

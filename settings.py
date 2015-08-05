@@ -24,14 +24,35 @@ SUBMIT_XGB_EXTERNAL = os.path.join(PROJECT_ROOT, 'data/submit_xgb_external.csv')
 
 SUBMIT_XGB_MODIFIED = os.path.join(PROJECT_ROOT, 'data/submit_xgb_modified.csv')
 
+
+SUBMIT_MY_XGB_DIRECT_REDUCED = os.path.join(PROJECT_ROOT, 'data/submit_xgb_my_direct_reduced.csv')
+
+SUBMIT_MY_XGB_DIRECT_FULL_SQRT_FULL = os.path.join(PROJECT_ROOT, 'data/submit_xgb_my_direct_full_sqrt_full.csv')
+
+SUBMIT_MY_XGB_DIRECT_REDUCED_SQRT_REDUCED = os.path.join(PROJECT_ROOT, 'data/submit_xgb_my_direct_reduced_sqrt_reduced.csv')
+
+SUBMIT_MY_XGB_DIRECT_MEAN = os.path.join(PROJECT_ROOT, 'data/submit_xgb_my_direct_descriptive_mean.csv')
+
+SUBMIT_MY_XGB_DIRECT_ONE_HOT = os.path.join(PROJECT_ROOT, 'data/submit_xgb_my_direct_one_hot.csv')
+
+
+SUBMIT_MY_XGB_SVM_ENSEMBLE = os.path.join(PROJECT_ROOT, 'data/submit_my_xgb_svm_ensemble_.csv')
+
 SUBMIT_SVM_REDUCED = os.path.join(PROJECT_ROOT, 'data/submit_svm_reduced.csv')
 
 from pymongo import MongoClient
 _client = MongoClient()
 _db = _client['hazard']
 MONGO_DATABASE = _db
-MONGO_GRIDSEARCH_COLLECTION = _db['grid_search']
 
+MONGO_GRIDSEARCH_COLLECTION = _db['grid_search']
+MONGO_SUBMISSIONS_COLLECTION = _db['submissions']
+MONGO_EARLY_STOP_XGB_GRID_SEARCH_COLLECTION = _db['early_stop']
+
+
+
+
+PICKLED_MODELS_DIR = os.path.join(PROJECT_ROOT, 'pickled_models')
 
 TRAIN_FILE = os.path.join(PROJECT_ROOT, 'data/train.csv')
 
@@ -65,6 +86,15 @@ CATEGORICAL_REDUCED = list(set(CATEGORICAL) - _DIFF)
 CONTINUOUS = list(set(FEATURES) - set(CATEGORICAL))
 
 RFECV_PICKLE = os.path.join(PROJECT_ROOT, 'rfecv.pkl')
+
+LOG_ROOT = os.path.join(PROJECT_ROOT, 'log')
+
+import logging
+logging.basicConfig(
+    filename=os.path.join(LOG_ROOT, 'grid_search.log'),
+    format='%(levelname)-10s %(asctime)s %(message)s',
+    level=logging.INFO
+)
 
 
 
